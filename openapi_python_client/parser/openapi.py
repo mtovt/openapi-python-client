@@ -435,6 +435,23 @@ class Endpoint:
 
 
 @dataclass
+class ParsingStatistics:
+    # todo: implement checks of generated methods for sync\async interfaces exists.
+    schemas_in_spec: int
+    schemas_parsed_by_reference: int
+    schemas_parsed_by_name: int
+    schemas_failed: int
+
+    # inline_schemas_in_spec: int  # todo implement
+    # inline_schemas_parsed: int
+    # inline_schemas_failed: int
+
+    methods_in_spec: int
+    methods_parsed: int
+    methods_failed: int
+
+
+@dataclass
 class GeneratorData:
     """All the data needed to generate a client"""
 
@@ -445,6 +462,7 @@ class GeneratorData:
     errors: List[ParseError]
     endpoint_collections_by_tag: Dict[utils.PythonIdentifier, EndpointCollection]
     enums: Iterator[EnumProperty]
+    parsing_statistics: ParsingStatistics
 
     @staticmethod
     def from_dict(data: Dict[str, Any], *, config: Config) -> Union["GeneratorData", GeneratorError]:
@@ -465,6 +483,23 @@ class GeneratorData:
             data=openapi.paths, schemas=schemas, config=config
         )
 
+        api_methods_counter = 0
+        for pathItem in openapi.paths.values():
+            for method in ("get", "put", "post", "delete", "options", "head", "patch", "trace"):
+                if pathItem.__getattribute__(method):
+                    api_methods_counter += 1
+
+        parsing_statistics = ParsingStatistics(
+            schemas_in_spec=len(data["components"]["schemas"]),
+            schemas_parsed_by_name=len(schemas.classes_by_name),
+            schemas_parsed_by_reference=len(schemas.classes_by_reference),
+            schemas_failed=len(schemas.errors),
+            methods_in_spec=api_methods_counter,
+            methods_parsed=sum((len(collection.endpoints) for collection in endpoint_collections_by_tag.values())),
+            methods_failed=sum((len(collection.parse_errors) for collection in endpoint_collections_by_tag.values())),
+        )
+        print("\n", parsing_statistics)
+
         enums = (prop for prop in schemas.classes_by_name.values() if isinstance(prop, EnumProperty))
         models = (prop for prop in schemas.classes_by_name.values() if isinstance(prop, ModelProperty))
 
@@ -476,4 +511,5 @@ class GeneratorData:
             models=models,
             errors=schemas.errors,
             enums=enums,
+            parsing_statistics=parsing_statistics,
         )
