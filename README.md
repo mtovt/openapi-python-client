@@ -35,6 +35,15 @@ You can also install with normal pip: `pip install openapi-python-client`
 
 Then, if you want tab completion: `openapi-python-client --install-completion`
 
+## Docker 
+
+Also is possible to run `openapi-python-client` in Docker. 
+
+If you want to use the latest release of `openapi-python-client` you may use:
+```bash
+./docker/user_run.sh openapi-python-client --help
+```
+
 ## Usage
 
 ### Create a new client
